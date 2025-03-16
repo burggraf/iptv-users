@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase';
 import { writable } from 'svelte/store';
-import type { IPTVUser } from './types';
+import type { IPTVUser, IPTVProvider } from './types';
 
 // Create a Pocketbase client
 export const pb = new PocketBase('http://127.0.0.1:8090');
@@ -29,6 +29,29 @@ export const register = async (email: string, password: string, passwordConfirm:
         passwordConfirm,
         name,
     });
+};
+
+// IPTV Provider Management Functions
+export const getProviders = async () => {
+    return await pb.collection('iptv_providers').getList(1, 50, {
+        sort: '-created_at',
+    });
+};
+
+export const getProvider = async (id: string) => {
+    return await pb.collection('iptv_providers').getOne(id);
+};
+
+export const createProvider = async (providerData: Partial<IPTVProvider>) => {
+    return await pb.collection('iptv_providers').create(providerData);
+};
+
+export const updateProvider = async (id: string, providerData: Partial<IPTVProvider>) => {
+    return await pb.collection('iptv_providers').update(id, providerData);
+};
+
+export const deleteProvider = async (id: string) => {
+    return await pb.collection('iptv_providers').delete(id);
 };
 
 // IPTV User Management Functions
