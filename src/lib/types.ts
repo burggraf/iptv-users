@@ -40,4 +40,5 @@ export interface IPTVProvider {
     server_protocol: string;
     rtmp_port: string;
     timezone: string;
+    user_id: string;
 }

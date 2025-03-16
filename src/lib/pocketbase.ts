@@ -46,7 +46,11 @@ export const getProvider = async (id: string) => {
 };
 
 export const createProvider = async (providerData: Partial<IPTVProvider>) => {
-    const result = await pb.collection('iptv_providers').create(providerData);
+    // Add the current user's ID to the provider data
+    const result = await pb.collection('iptv_providers').create({
+        ...providerData,
+        user_id: pb.authStore.model?.id
+    });
     // Update the store after creating a provider
     await getProviders();
     return result;
