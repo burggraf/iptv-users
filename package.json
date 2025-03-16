@@ -15,13 +15,32 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^4.0.0",
+		"@sveltejs/adapter-static": "^3.0.8",
 		"@sveltejs/kit": "^2.16.0",
-		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"@sveltejs/vite-plugin-svelte": "^5.0.3",
+		"autoprefixer": "^10.4.20",
+		"bits-ui": "^0.22.0",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"formsnap": "^1.0.1",
+		"lucide-svelte": "^0.482.0",
+		"postcss": "^8.5.3",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
+		"prettier-plugin-tailwindcss": "^0.6.10",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
+		"sveltekit-superforms": "^2.24.0",
+		"tailwind-merge": "^3.0.2",
+		"tailwind-variants": "^1.0.0",
+		"tailwindcss": "^3.4.17",
+		"tailwindcss-animate": "^1.0.7",
 		"typescript": "^5.0.0",
-		"vite": "^6.0.0"
+		"vite": "^6.0.0",
+		"zod": "^3.24.2"
+	},
+	"dependencies": {
+		"pocketbase": "^0.25.2",
+		"shadcn-svelte": "^0.14.0"
 	}
 }
