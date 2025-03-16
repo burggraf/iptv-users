@@ -18,11 +18,10 @@
 	} from '$lib/components/ui/table';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import ProviderDialog from '$lib/components/provider-dialog.svelte';
-	import { getProviders, deleteProvider } from '$lib/pocketbase';
+	import { getProviders, deleteProvider, providers } from '$lib/pocketbase';
 	import type { IPTVProvider } from '$lib/types';
 	import { onMount } from 'svelte';
 
-	let providers: IPTVProvider[] = [];
 	let loading = true;
 	let error = '';
 	let searchQuery = '';
@@ -31,8 +30,7 @@
 
 	async function loadProviders() {
 		try {
-			const result = await getProviders();
-			providers = result.items;
+			await getProviders();
 			error = '';
 		} catch (err) {
 			console.error('Error loading providers:', err);
@@ -44,7 +42,7 @@
 
 	onMount(loadProviders);
 
-	function filterProviders() {
+	function filterProviders(providers: IPTVProvider[]) {
 		if (!searchQuery) return providers;
 		const query = searchQuery.toLowerCase();
 		return providers.filter(
@@ -62,7 +60,6 @@
 
 		try {
 			await deleteProvider(provider.id);
-			await loadProviders();
 		} catch (err) {
 			console.error('Error deleting provider:', err);
 			error = 'Failed to delete provider. Please try again.';
@@ -118,7 +115,7 @@
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{#each filterProviders() as provider (provider.id)}
+						{#each filterProviders($providers) as provider (provider.id)}
 							<TableRow>
 								<TableCell>{provider.name}</TableCell>
 								<TableCell>{provider.username}</TableCell>

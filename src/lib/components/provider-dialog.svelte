@@ -21,20 +21,53 @@
 	let error = '';
 
 	// Form fields
-	let name = provider?.name || '';
-	let username = provider?.username || '';
-	let password = provider?.password || '';
-	let message = provider?.message || '';
-	let server_url = provider?.server_url || '';
-	let server_port = provider?.server_port || '';
-	let https_port = provider?.https_port || '';
-	let server_protocol = provider?.server_protocol || 'http';
-	let rtmp_port = provider?.rtmp_port || '';
-	let max_connections = provider?.max_connections || '1';
-	let timezone = provider?.timezone || 'UTC';
-	let allowed_output_formats = provider?.allowed_output_formats || ['m3u8', 'ts'];
+	let name = '';
+	let username = '';
+	let password = '';
+	let message = '';
+	let server_url = '';
+	let server_port = '';
+	let https_port = '';
+	let server_protocol = 'http';
+	let rtmp_port = '';
+	let max_connections = '1';
+	let timezone = 'UTC';
+	let allowed_output_formats = ['m3u8', 'ts'];
 
-	$: isEditing = !!provider;
+	$: if (provider) {
+		name = provider.name || '';
+		username = provider.username || '';
+		password = provider.password || '';
+		message = provider.message || '';
+		server_url = provider.server_url || '';
+		server_port = provider.server_port || '';
+		https_port = provider.https_port || '';
+		server_protocol = provider.server_protocol || 'http';
+		rtmp_port = provider.rtmp_port || '';
+		max_connections = provider.max_connections || '1';
+		timezone = provider.timezone || 'UTC';
+		allowed_output_formats = provider.allowed_output_formats || ['m3u8', 'ts'];
+	}
+
+	function resetForm() {
+		name = '';
+		username = '';
+		password = '';
+		message = '';
+		server_url = '';
+		server_port = '';
+		https_port = '';
+		server_protocol = 'http';
+		rtmp_port = '';
+		max_connections = '1';
+		timezone = 'UTC';
+		allowed_output_formats = ['m3u8', 'ts'];
+		error = '';
+	}
+
+	$: if (!open) {
+		resetForm();
+	}
 
 	async function handleSubmit() {
 		loading = true;
@@ -60,17 +93,18 @@
 				active_cons: '0'
 			};
 
-			if (isEditing && provider?.id) {
+			if (provider?.id) {
 				await updateProvider(provider.id, providerData);
 			} else {
 				await createProvider(providerData);
 			}
 
-			onSuccess();
 			onOpenChange(false);
-		} catch (err) {
+			// Call onSuccess after the dialog is closed
+			setTimeout(onSuccess, 0);
+		} catch (err: unknown) {
 			console.error('Error saving provider:', err);
-			error = err.message || 'Failed to save provider. Please try again.';
+			error = err instanceof Error ? err.message : 'Failed to save provider. Please try again.';
 		} finally {
 			loading = false;
 		}
@@ -80,9 +114,9 @@
 <Dialog {open} {onOpenChange}>
 	<DialogContent>
 		<DialogHeader>
-			<DialogTitle>{isEditing ? 'Edit' : 'Add'} IPTV Provider</DialogTitle>
+			<DialogTitle>{provider ? 'Edit' : 'Add'} IPTV Provider</DialogTitle>
 			<DialogDescription>
-				{isEditing
+				{provider
 					? 'Update the provider details below.'
 					: 'Fill in the details to add a new provider.'}
 			</DialogDescription>
@@ -167,7 +201,7 @@
 		<DialogFooter>
 			<Button variant="outline" on:click={() => onOpenChange(false)}>Cancel</Button>
 			<Button on:click={handleSubmit} disabled={loading}>
-				{loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+				{loading ? 'Saving...' : provider ? 'Update' : 'Create'}
 			</Button>
 		</DialogFooter>
 	</DialogContent>

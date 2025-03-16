@@ -7,6 +7,7 @@ export const pb = new PocketBase('http://127.0.0.1:8090');
 
 // Create stores for user and authentication state
 export const currentUser = writable(pb.authStore.model);
+export const providers = writable<IPTVProvider[]>([]);
 
 // Subscribe to auth state changes
 pb.authStore.onChange((auth) => {
@@ -33,9 +34,11 @@ export const register = async (email: string, password: string, passwordConfirm:
 
 // IPTV Provider Management Functions
 export const getProviders = async () => {
-    return await pb.collection('iptv_providers').getList(1, 50, {
+    const result = await pb.collection('iptv_providers').getList(1, 50, {
         sort: '-created_at',
     });
+    providers.set(result.items);
+    return result;
 };
 
 export const getProvider = async (id: string) => {
@@ -43,15 +46,24 @@ export const getProvider = async (id: string) => {
 };
 
 export const createProvider = async (providerData: Partial<IPTVProvider>) => {
-    return await pb.collection('iptv_providers').create(providerData);
+    const result = await pb.collection('iptv_providers').create(providerData);
+    // Update the store after creating a provider
+    await getProviders();
+    return result;
 };
 
 export const updateProvider = async (id: string, providerData: Partial<IPTVProvider>) => {
-    return await pb.collection('iptv_providers').update(id, providerData);
+    const result = await pb.collection('iptv_providers').update(id, providerData);
+    // Update the store after updating a provider
+    await getProviders();
+    return result;
 };
 
 export const deleteProvider = async (id: string) => {
-    return await pb.collection('iptv_providers').delete(id);
+    const result = await pb.collection('iptv_providers').delete(id);
+    // Update the store after deleting a provider
+    await getProviders();
+    return result;
 };
 
 // IPTV User Management Functions
