@@ -68,33 +68,54 @@
 				</Alert>
 			{/if}
 
-			<div class="space-y-4">
-				<div class="space-y-2">
-					<label for="name" class="text-sm font-medium">Name</label>
-					<Input id="name" type="text" placeholder="John Doe" bind:value={name} />
+			<form id="registerForm" on:submit|preventDefault={handleRegister}>
+				<div class="space-y-4">
+					<div class="space-y-2">
+						<label for="name" class="text-sm font-medium">Name</label>
+						<Input
+							id="name"
+							type="text"
+							autocomplete="name"
+							placeholder="John Doe"
+							bind:value={name}
+						/>
+					</div>
+					<div class="space-y-2">
+						<label for="email" class="text-sm font-medium">Email</label>
+						<Input
+							id="email"
+							type="email"
+							autocomplete="username"
+							placeholder="your@email.com"
+							bind:value={email}
+						/>
+					</div>
+					<div class="space-y-2">
+						<label for="password" class="text-sm font-medium">Password</label>
+						<Input
+							id="password"
+							type="password"
+							autocomplete="new-password"
+							placeholder="••••••••"
+							bind:value={password}
+						/>
+					</div>
+					<div class="space-y-2">
+						<label for="confirmPassword" class="text-sm font-medium">Confirm Password</label>
+						<Input
+							id="confirmPassword"
+							type="password"
+							autocomplete="new-password"
+							placeholder="••••••••"
+							bind:value={confirmPassword}
+						/>
+					</div>
 				</div>
-				<div class="space-y-2">
-					<label for="email" class="text-sm font-medium">Email</label>
-					<Input id="email" type="email" placeholder="your@email.com" bind:value={email} />
-				</div>
-				<div class="space-y-2">
-					<label for="password" class="text-sm font-medium">Password</label>
-					<Input id="password" type="password" placeholder="••••••••" bind:value={password} />
-				</div>
-				<div class="space-y-2">
-					<label for="confirmPassword" class="text-sm font-medium">Confirm Password</label>
-					<Input
-						id="confirmPassword"
-						type="password"
-						placeholder="••••••••"
-						bind:value={confirmPassword}
-					/>
-				</div>
-			</div>
+			</form>
 		</CardContent>
 		<CardFooter class="flex justify-between">
 			<Button variant="outline" on:click={() => goto('/login')}>Login Instead</Button>
-			<Button on:click={handleRegister} disabled={loading}>
+			<Button type="submit" form="registerForm" disabled={loading}>
 				{loading ? 'Creating Account...' : 'Register'}
 			</Button>
 		</CardFooter>

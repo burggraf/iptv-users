@@ -52,20 +52,34 @@
 				</Alert>
 			{/if}
 
-			<div class="space-y-4">
-				<div class="space-y-2">
-					<label for="email" class="text-sm font-medium">Email</label>
-					<Input id="email" type="email" placeholder="your@email.com" bind:value={email} />
+			<form id="loginForm" on:submit|preventDefault={handleLogin}>
+				<div class="space-y-4">
+					<div class="space-y-2">
+						<label for="email" class="text-sm font-medium">Email</label>
+						<Input
+							id="email"
+							type="email"
+							autocomplete="username"
+							placeholder="your@email.com"
+							bind:value={email}
+						/>
+					</div>
+					<div class="space-y-2">
+						<label for="password" class="text-sm font-medium">Password</label>
+						<Input
+							id="password"
+							type="password"
+							autocomplete="current-password"
+							placeholder="••••••••"
+							bind:value={password}
+						/>
+					</div>
 				</div>
-				<div class="space-y-2">
-					<label for="password" class="text-sm font-medium">Password</label>
-					<Input id="password" type="password" placeholder="••••••••" bind:value={password} />
-				</div>
-			</div>
+			</form>
 		</CardContent>
 		<CardFooter class="flex justify-between">
 			<Button variant="outline" on:click={() => goto('/register')}>Register</Button>
-			<Button on:click={handleLogin} disabled={loading}>
+			<Button type="submit" form="loginForm" disabled={loading}>
 				{loading ? 'Logging in...' : 'Login'}
 			</Button>
 		</CardFooter>

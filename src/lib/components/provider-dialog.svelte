@@ -122,77 +122,79 @@
 			</DialogDescription>
 		</DialogHeader>
 
-		<div class="grid gap-4 py-4">
-			<div class="space-y-2">
-				<label for="name" class="text-sm font-medium">Provider Name</label>
-				<Input id="name" bind:value={name} />
+		<form id="providerForm" on:submit|preventDefault={handleSubmit}>
+			<div class="grid gap-4 py-4">
+				<div class="space-y-2">
+					<label for="name" class="text-sm font-medium">Provider Name</label>
+					<Input id="name" bind:value={name} />
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-2">
+						<label for="username" class="text-sm font-medium">Username</label>
+						<Input id="username" autocomplete="off" bind:value={username} />
+					</div>
+
+					<div class="space-y-2">
+						<label for="password" class="text-sm font-medium">Password</label>
+						<Input id="password" type="password" autocomplete="off" bind:value={password} />
+					</div>
+				</div>
+
+				<div class="space-y-2">
+					<label for="message" class="text-sm font-medium">Welcome Message</label>
+					<Input id="message" bind:value={message} />
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-2">
+						<label for="server_url" class="text-sm font-medium">Server URL</label>
+						<Input id="server_url" bind:value={server_url} />
+					</div>
+
+					<div class="space-y-2">
+						<label for="server_protocol" class="text-sm font-medium">Protocol</label>
+						<select
+							id="server_protocol"
+							bind:value={server_protocol}
+							class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors"
+						>
+							<option value="http">HTTP</option>
+							<option value="https">HTTPS</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-3 gap-4">
+					<div class="space-y-2">
+						<label for="server_port" class="text-sm font-medium">Server Port</label>
+						<Input id="server_port" bind:value={server_port} />
+					</div>
+
+					<div class="space-y-2">
+						<label for="https_port" class="text-sm font-medium">HTTPS Port</label>
+						<Input id="https_port" bind:value={https_port} />
+					</div>
+
+					<div class="space-y-2">
+						<label for="rtmp_port" class="text-sm font-medium">RTMP Port</label>
+						<Input id="rtmp_port" bind:value={rtmp_port} />
+					</div>
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-2">
+						<label for="max_connections" class="text-sm font-medium">Max Connections</label>
+						<Input id="max_connections" type="number" min="1" bind:value={max_connections} />
+					</div>
+
+					<div class="space-y-2">
+						<label for="timezone" class="text-sm font-medium">Timezone</label>
+						<Input id="timezone" bind:value={timezone} />
+					</div>
+				</div>
 			</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-2">
-					<label for="username" class="text-sm font-medium">Username</label>
-					<Input id="username" bind:value={username} />
-				</div>
-
-				<div class="space-y-2">
-					<label for="password" class="text-sm font-medium">Password</label>
-					<Input id="password" type="password" bind:value={password} />
-				</div>
-			</div>
-
-			<div class="space-y-2">
-				<label for="message" class="text-sm font-medium">Welcome Message</label>
-				<Input id="message" bind:value={message} />
-			</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-2">
-					<label for="server_url" class="text-sm font-medium">Server URL</label>
-					<Input id="server_url" bind:value={server_url} />
-				</div>
-
-				<div class="space-y-2">
-					<label for="server_protocol" class="text-sm font-medium">Protocol</label>
-					<select
-						id="server_protocol"
-						bind:value={server_protocol}
-						class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors"
-					>
-						<option value="http">HTTP</option>
-						<option value="https">HTTPS</option>
-					</select>
-				</div>
-			</div>
-
-			<div class="grid grid-cols-3 gap-4">
-				<div class="space-y-2">
-					<label for="server_port" class="text-sm font-medium">Server Port</label>
-					<Input id="server_port" bind:value={server_port} />
-				</div>
-
-				<div class="space-y-2">
-					<label for="https_port" class="text-sm font-medium">HTTPS Port</label>
-					<Input id="https_port" bind:value={https_port} />
-				</div>
-
-				<div class="space-y-2">
-					<label for="rtmp_port" class="text-sm font-medium">RTMP Port</label>
-					<Input id="rtmp_port" bind:value={rtmp_port} />
-				</div>
-			</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-2">
-					<label for="max_connections" class="text-sm font-medium">Max Connections</label>
-					<Input id="max_connections" type="number" min="1" bind:value={max_connections} />
-				</div>
-
-				<div class="space-y-2">
-					<label for="timezone" class="text-sm font-medium">Timezone</label>
-					<Input id="timezone" bind:value={timezone} />
-				</div>
-			</div>
-		</div>
+		</form>
 
 		{#if error}
 			<p class="mb-4 text-sm text-red-500">{error}</p>
@@ -200,7 +202,7 @@
 
 		<DialogFooter>
 			<Button variant="outline" on:click={() => onOpenChange(false)}>Cancel</Button>
-			<Button on:click={handleSubmit} disabled={loading}>
+			<Button type="submit" form="providerForm" disabled={loading}>
 				{loading ? 'Saving...' : provider ? 'Update' : 'Create'}
 			</Button>
 		</DialogFooter>
