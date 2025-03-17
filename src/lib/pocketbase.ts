@@ -70,6 +70,54 @@ export const deleteProvider = async (id: string) => {
     return result;
 };
 
+export const checkProviderUserInfo = async (provider: IPTVProvider) => {
+    // Construct base URL with port if it exists
+    const baseUrl = `${provider.server_protocol}://${provider.server_url}`;
+    const port = provider.server_protocol === 'https' ? provider.https_port : provider.server_port;
+    const urlWithPort = port ? `${baseUrl}:${port}` : baseUrl;
+
+    const url = new URL('/player_api.php', urlWithPort);
+    url.searchParams.append('username', provider.username);
+    url.searchParams.append('password', provider.password);
+    url.searchParams.append('action', 'user');
+    url.searchParams.append('sub', 'info');
+
+    // Debug log: Show the full URL being called
+    console.log('Calling IPTV API URL:', url.toString());
+
+    try {
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Debug log: Show the raw API response
+        console.log('IPTV API Response:', JSON.stringify(data, null, 2));
+
+        // Update the provider with the new information
+        const updateData = {
+            ...data.user_info,
+            ...data.server_info,
+            // Ensure these fields are properly typed
+            auth: Number(data.user_info.auth),
+            active_cons: String(data.user_info.active_cons),
+            max_connections: Number(data.user_info.max_connections),
+            xui: Boolean(data.server_info.xui),
+            revision: Number(data.server_info.revision),
+            timestamp_now: Number(data.server_info.timestamp_now)
+        };
+
+        await updateProvider(provider.id, updateData);
+        return data;
+    } catch (error) {
+        // Debug log: Show any errors that occur
+        console.error('Error checking provider user info:', error);
+        console.error('Failed URL:', url.toString());
+        throw error;
+    }
+};
+
 // IPTV User Management Functions
 export const getIptvUsers = async () => {
     return await pb.collection('iptv_users').getList(1, 50, {

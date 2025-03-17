@@ -18,7 +18,7 @@
 	} from '$lib/components/ui/table';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import ProviderDialog from '$lib/components/provider-dialog.svelte';
-	import { getProviders, deleteProvider, providers } from '$lib/pocketbase';
+	import { getProviders, deleteProvider, providers, checkProviderUserInfo } from '$lib/pocketbase';
 	import type { IPTVProvider } from '$lib/types';
 	import { onMount } from 'svelte';
 
@@ -69,6 +69,16 @@
 	function handleEdit(provider: IPTVProvider) {
 		selectedProvider = provider;
 		dialogOpen = true;
+	}
+
+	async function handleCheckInfo(provider: IPTVProvider) {
+		try {
+			const info = await checkProviderUserInfo(provider);
+			console.log('Provider user info:', info);
+		} catch (err) {
+			console.error('Error checking provider info:', err);
+			error = 'Failed to check provider info. Please verify the connection details.';
+		}
 	}
 
 	function handleAdd() {
@@ -126,6 +136,9 @@
 								<TableCell class="flex gap-2">
 									<Button variant="outline" size="sm" on:click={() => handleEdit(provider)}
 										>Edit</Button
+									>
+									<Button variant="outline" size="sm" on:click={() => handleCheckInfo(provider)}
+										>Check Info</Button
 									>
 									<Button
 										variant="outline"

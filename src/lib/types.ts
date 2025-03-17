@@ -32,7 +32,7 @@ export interface IPTVProvider {
     is_trial: string;
     active_cons: string;
     created_at: string;
-    max_connections: string;
+    max_connections: number;
     allowed_output_formats: string[];
     server_url: string;
     server_port: string;
@@ -41,4 +41,10 @@ export interface IPTVProvider {
     rtmp_port: string;
     timezone: string;
     user_id: string;
+    // New server info fields
+    xui: boolean;
+    version: string;
+    revision: number;
+    timestamp_now: number;
+    time_now: string;
 }

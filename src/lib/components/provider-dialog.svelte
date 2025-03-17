@@ -30,7 +30,7 @@
 	let https_port = '';
 	let server_protocol = 'http';
 	let rtmp_port = '';
-	let max_connections = '1';
+	let max_connections = 1;
 	let timezone = 'UTC';
 	let allowed_output_formats = ['m3u8', 'ts'];
 
@@ -44,7 +44,7 @@
 		https_port = provider.https_port || '';
 		server_protocol = provider.server_protocol || 'http';
 		rtmp_port = provider.rtmp_port || '';
-		max_connections = provider.max_connections || '1';
+		max_connections = provider.max_connections || 1;
 		timezone = provider.timezone || 'UTC';
 		allowed_output_formats = provider.allowed_output_formats || ['m3u8', 'ts'];
 	}
@@ -59,7 +59,7 @@
 		https_port = '';
 		server_protocol = 'http';
 		rtmp_port = '';
-		max_connections = '1';
+		max_connections = 1;
 		timezone = 'UTC';
 		allowed_output_formats = ['m3u8', 'ts'];
 		error = '';
