@@ -82,21 +82,30 @@ export const checkProviderUserInfo = async (provider: IPTVProvider) => {
     url.searchParams.append('action', 'user');
     url.searchParams.append('sub', 'info');
 
-    // Debug log: Show the full URL being called
     console.log('Calling IPTV API URL:', url.toString());
 
     try {
         const response = await fetch(url.toString());
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+        let updateData: Partial<IPTVProvider> = {};
 
-        // Debug log: Show the raw API response
+        if (!response.ok) {
+            updateData.status = 'Invalid Credentials';
+            await updateProvider(provider.id, updateData);
+            throw new Error(`Invalid credentials - HTTP status: ${response.status}`);
+        }
+
+        const data = await response.json();
         console.log('IPTV API Response:', JSON.stringify(data, null, 2));
 
+        // Check if the response indicates an error or invalid credentials
+        if (!data || !data.user_info || !data.server_info) {
+            updateData.status = 'Invalid Credentials';
+            await updateProvider(provider.id, updateData);
+            throw new Error('Invalid response format - likely invalid credentials');
+        }
+
         // Update the provider with the new information
-        const updateData = {
+        updateData = {
             ...data.user_info,
             ...data.server_info,
             // Ensure these fields are properly typed
@@ -105,15 +114,23 @@ export const checkProviderUserInfo = async (provider: IPTVProvider) => {
             max_connections: Number(data.user_info.max_connections),
             xui: Boolean(data.server_info.xui),
             revision: Number(data.server_info.revision),
-            timestamp_now: Number(data.server_info.timestamp_now)
+            timestamp_now: Number(data.server_info.timestamp_now),
+            status: 'Active' // Set status to Active when successful
         };
 
         await updateProvider(provider.id, updateData);
         return data;
     } catch (error) {
-        // Debug log: Show any errors that occur
         console.error('Error checking provider user info:', error);
         console.error('Failed URL:', url.toString());
+
+        // Handle domain-related errors
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+            await updateProvider(provider.id, { status: 'Invalid Domain' });
+            throw new Error('Invalid domain or server not reachable');
+        }
+
+        // Re-throw the error to be handled by the caller
         throw error;
     }
 };
