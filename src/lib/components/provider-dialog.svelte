@@ -9,7 +9,7 @@
 	} from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import { createProvider, updateProvider } from '$lib/pocketbase';
+	import { createProvider, updateProvider, checkProviderUserInfo } from '$lib/pocketbase';
 	import type { IPTVProvider } from '$lib/types';
 
 	export let open = false;
@@ -93,10 +93,32 @@
 				active_cons: '0'
 			};
 
+			let savedProvider;
 			if (provider?.id) {
-				await updateProvider(provider.id, providerData);
+				savedProvider = await updateProvider(provider.id, providerData);
 			} else {
-				await createProvider(providerData);
+				savedProvider = await createProvider(providerData);
+				// After creating a new provider, immediately check its info
+				try {
+					// Create an IPTVProvider object from the saved record
+					const providerForCheck: IPTVProvider = {
+						...savedProvider,
+						...providerData,
+						id: savedProvider.id,
+						exp_date: '',
+						created_at: new Date().toISOString(),
+						user_id: savedProvider.user_id,
+						xui: false,
+						version: '',
+						revision: 0,
+						timestamp_now: 0,
+						time_now: ''
+					};
+					await checkProviderUserInfo(providerForCheck);
+				} catch (checkError) {
+					console.error('Error checking new provider info:', checkError);
+					// We don't want to block the dialog close if the check fails
+				}
 			}
 
 			onOpenChange(false);
@@ -141,7 +163,7 @@
 							id="provider_username"
 							type="text"
 							name="provider_username"
-							autocomplete="chrome-off"
+							autocomplete="off"
 							autocorrect="off"
 							autocapitalize="off"
 							spellcheck="false"
@@ -150,7 +172,10 @@
 							data-username="false"
 							bind:value={username}
 							readonly
-							on:focus={(e) => e.target.removeAttribute('readonly')}
+							on:focus={(e) => {
+								const target = e.target as HTMLInputElement;
+								if (target) target.removeAttribute('readonly');
+							}}
 						/>
 					</div>
 
@@ -160,13 +185,16 @@
 							id="provider_password"
 							name="provider_password"
 							type="text"
-							autocomplete="chrome-off"
+							autocomplete="off"
 							data-form-type="other"
 							data-lpignore="true"
 							data-password="false"
 							bind:value={password}
 							readonly
-							on:focus={(e) => e.target.removeAttribute('readonly')}
+							on:focus={(e) => {
+								const target = e.target as HTMLInputElement;
+								if (target) target.removeAttribute('readonly');
+							}}
 						/>
 					</div>
 				</div>

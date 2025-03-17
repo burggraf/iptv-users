@@ -35,9 +35,37 @@ export const register = async (email: string, password: string, passwordConfirm:
 // IPTV Provider Management Functions
 export const getProviders = async () => {
     const result = await pb.collection('iptv_providers').getList(1, 50, {
-        sort: '-created_at',
+        sort: '-time_now',
     });
-    providers.set(result.items);
+    // Convert PocketBase records to IPTVProvider type
+    providers.set(result.items.map(item => ({
+        ...item,
+        id: item.id,
+        name: item.name,
+        username: item.username,
+        password: item.password,
+        message: item.message,
+        auth: item.auth,
+        status: item.status,
+        exp_date: item.exp_date,
+        is_trial: item.is_trial,
+        active_cons: item.active_cons,
+        created_at: item.created_at,
+        max_connections: item.max_connections,
+        allowed_output_formats: item.allowed_output_formats,
+        server_url: item.server_url,
+        server_port: item.server_port,
+        https_port: item.https_port,
+        server_protocol: item.server_protocol,
+        rtmp_port: item.rtmp_port,
+        timezone: item.timezone,
+        user_id: item.user_id,
+        xui: item.xui,
+        version: item.version,
+        revision: item.revision,
+        timestamp_now: item.timestamp_now,
+        time_now: item.time_now
+    }) as IPTVProvider));
     return result;
 };
 

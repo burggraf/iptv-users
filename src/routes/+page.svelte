@@ -118,7 +118,6 @@
 							<TableHead>Name</TableHead>
 							<TableHead>Username</TableHead>
 							<TableHead>Server URL</TableHead>
-							<TableHead>Protocol</TableHead>
 							<TableHead>Status</TableHead>
 							<TableHead>Max Connections</TableHead>
 							<TableHead>Actions</TableHead>
@@ -130,7 +129,6 @@
 								<TableCell>{provider.name}</TableCell>
 								<TableCell>{provider.username}</TableCell>
 								<TableCell>{provider.server_url}</TableCell>
-								<TableCell>{provider.server_protocol.toUpperCase()}</TableCell>
 								<TableCell>{provider.status}</TableCell>
 								<TableCell>{provider.max_connections}</TableCell>
 								<TableCell class="flex gap-2">
