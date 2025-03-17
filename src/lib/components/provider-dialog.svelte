@@ -122,7 +122,12 @@
 			</DialogDescription>
 		</DialogHeader>
 
-		<form id="providerForm" on:submit|preventDefault={handleSubmit}>
+		<form
+			id="providerForm"
+			on:submit|preventDefault={handleSubmit}
+			autocomplete="off"
+			data-lpignore="true"
+		>
 			<div class="grid gap-4 py-4">
 				<div class="space-y-2">
 					<label for="name" class="text-sm font-medium">Provider Name</label>
@@ -131,13 +136,38 @@
 
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-2">
-						<label for="username" class="text-sm font-medium">Username</label>
-						<Input id="username" autocomplete="off" bind:value={username} />
+						<label for="provider_username" class="text-sm font-medium">Username</label>
+						<Input
+							id="provider_username"
+							type="text"
+							name="provider_username"
+							autocomplete="chrome-off"
+							autocorrect="off"
+							autocapitalize="off"
+							spellcheck="false"
+							data-form-type="other"
+							data-lpignore="true"
+							data-username="false"
+							bind:value={username}
+							readonly
+							on:focus={(e) => e.target.removeAttribute('readonly')}
+						/>
 					</div>
 
 					<div class="space-y-2">
-						<label for="password" class="text-sm font-medium">Password</label>
-						<Input id="password" type="password" autocomplete="off" bind:value={password} />
+						<label for="provider_password" class="text-sm font-medium">Password</label>
+						<Input
+							id="provider_password"
+							name="provider_password"
+							type="text"
+							autocomplete="chrome-off"
+							data-form-type="other"
+							data-lpignore="true"
+							data-password="false"
+							bind:value={password}
+							readonly
+							on:focus={(e) => e.target.removeAttribute('readonly')}
+						/>
 					</div>
 				</div>
 
