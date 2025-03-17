@@ -1,30 +1,15 @@
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-node';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: vitePreprocess(),
 	kit: {
-		// Using adapter-static for a static website with no SSR
 		adapter: adapter({
-			pages: 'build',
-			assets: 'build',
-			fallback: 'index.html',
+			out: 'build',
 			precompress: false,
-			strict: true
+			envPrefix: ''
 		}),
-
-		prerender: {
-			handleHttpError: ({ path, referrer, message }) => {
-				// Ignore certain errors or handle them differently
-				if (path.startsWith('/api')) {
-					return;
-				}
-				// Otherwise throw the error
-				throw new Error(message);
-			},
-			handleMissingId: 'ignore'
-		},
 		alias: {
 			'@/*': './src/lib/*'
 		}
