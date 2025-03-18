@@ -24,7 +24,8 @@
 		providers,
 		checkProviderUserInfo,
 		syncCategories,
-		syncChannels
+		syncChannels,
+		pb
 	} from '$lib/pocketbase';
 	import type { IPTVProvider } from '$lib/types';
 	import { onMount } from 'svelte';
@@ -43,8 +44,32 @@
 	let dialogOpen = false;
 	let selectedProvider: IPTVProvider | null = null;
 	let syncing: { [key: string]: boolean } = {};
+	let providerStats: { [key: string]: { categories: number; channels: number } } = {};
 
 	let messageTimeout: NodeJS.Timeout;
+
+	async function loadProviderStats() {
+		for (const provider of $providers) {
+			try {
+				const [categories, channels] = await Promise.all([
+					pb.collection('categories').getList(1, 1, {
+						filter: `provider_id = "${provider.id}"`,
+						fields: 'id'
+					}),
+					pb.collection('channels').getList(1, 1, {
+						filter: `provider_id = "${provider.id}"`,
+						fields: 'id'
+					})
+				]);
+				providerStats[provider.id] = {
+					categories: categories.totalItems,
+					channels: channels.totalItems
+				};
+			} catch (err) {
+				console.error('Error loading stats for provider:', provider.id, err);
+			}
+		}
+	}
 
 	function showMessage(message: string, isError = false) {
 		if (messageTimeout) clearTimeout(messageTimeout);
@@ -64,6 +89,7 @@
 	async function loadProviders() {
 		try {
 			await getProviders();
+			await loadProviderStats();
 			error = '';
 		} catch (err) {
 			console.error('Error loading providers:', err);
@@ -120,6 +146,7 @@
 
 		try {
 			await syncCategories(provider);
+			await loadProviderStats(); // Refresh stats after sync
 			showMessage(`Successfully synced categories for ${provider.name}`);
 		} catch (err) {
 			console.error('Error syncing categories:', err);
@@ -135,6 +162,7 @@
 
 		try {
 			await syncChannels(provider);
+			await loadProviderStats(); // Refresh stats after sync
 			showMessage(`Successfully synced channels for ${provider.name}`);
 		} catch (err) {
 			console.error('Error syncing channels:', err);
@@ -188,6 +216,8 @@
 							<TableHead>Username</TableHead>
 							<TableHead>Server URL</TableHead>
 							<TableHead>Status</TableHead>
+							<TableHead>Categories</TableHead>
+							<TableHead>Channels</TableHead>
 							<TableHead>Max Connections</TableHead>
 							<TableHead>Actions</TableHead>
 						</TableRow>
@@ -199,6 +229,8 @@
 								<TableCell>{provider.username}</TableCell>
 								<TableCell>{provider.server_url}</TableCell>
 								<TableCell>{provider.status}</TableCell>
+								<TableCell>{providerStats[provider.id]?.categories ?? 0}</TableCell>
+								<TableCell>{providerStats[provider.id]?.channels ?? 0}</TableCell>
 								<TableCell>{provider.max_connections}</TableCell>
 								<TableCell class="flex gap-2">
 									<DropdownMenu>
