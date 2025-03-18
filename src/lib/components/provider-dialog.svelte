@@ -9,7 +9,13 @@
 	} from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import { createProvider, updateProvider, checkProviderUserInfo } from '$lib/pocketbase';
+	import {
+		createProvider,
+		updateProvider,
+		checkProviderUserInfo,
+		syncCategories,
+		syncChannels
+	} from '$lib/pocketbase';
 	import type { IPTVProvider } from '$lib/types';
 
 	export let open = false;
@@ -98,7 +104,7 @@
 				savedProvider = await updateProvider(provider.id, providerData);
 			} else {
 				savedProvider = await createProvider(providerData);
-				// After creating a new provider, immediately check its info
+				// After creating a new provider, check info and sync data if active
 				try {
 					// Create an IPTVProvider object from the saved record
 					const providerForCheck: IPTVProvider = {
@@ -114,10 +120,48 @@
 						timestamp_now: 0,
 						time_now: ''
 					};
+
+					// Check provider info
 					await checkProviderUserInfo(providerForCheck);
+
+					// If the provider status is Active after checking info, sync categories and channels
+					const updatedProviderRecord = await updateProvider(savedProvider.id, {});
+					if (updatedProviderRecord.status === 'Active') {
+						// Create a properly typed IPTVProvider object
+						const updatedProvider: IPTVProvider = {
+							...updatedProviderRecord,
+							id: updatedProviderRecord.id,
+							name: updatedProviderRecord.name,
+							username: updatedProviderRecord.username,
+							password: updatedProviderRecord.password,
+							message: updatedProviderRecord.message,
+							auth: updatedProviderRecord.auth,
+							status: updatedProviderRecord.status,
+							exp_date: updatedProviderRecord.exp_date || '',
+							is_trial: updatedProviderRecord.is_trial,
+							active_cons: updatedProviderRecord.active_cons,
+							created_at: updatedProviderRecord.created_at,
+							max_connections: updatedProviderRecord.max_connections,
+							allowed_output_formats: updatedProviderRecord.allowed_output_formats,
+							server_url: updatedProviderRecord.server_url,
+							server_port: updatedProviderRecord.server_port,
+							https_port: updatedProviderRecord.https_port,
+							server_protocol: updatedProviderRecord.server_protocol,
+							rtmp_port: updatedProviderRecord.rtmp_port,
+							timezone: updatedProviderRecord.timezone,
+							user_id: updatedProviderRecord.user_id,
+							xui: updatedProviderRecord.xui || false,
+							version: updatedProviderRecord.version || '',
+							revision: updatedProviderRecord.revision || 0,
+							timestamp_now: updatedProviderRecord.timestamp_now || 0,
+							time_now: updatedProviderRecord.time_now || ''
+						};
+						await syncCategories(updatedProvider);
+						await syncChannels(updatedProvider);
+					}
 				} catch (checkError) {
-					console.error('Error checking new provider info:', checkError);
-					// We don't want to block the dialog close if the check fails
+					console.error('Error during provider setup:', checkError);
+					// We don't want to block the dialog close if the setup fails
 				}
 			}
 
