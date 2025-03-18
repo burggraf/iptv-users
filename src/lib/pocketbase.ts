@@ -163,6 +163,126 @@ export const checkProviderUserInfo = async (provider: IPTVProvider) => {
     }
 };
 
+// IPTV Categories Management Functions
+export const syncCategories = async (provider: IPTVProvider) => {
+    // Construct base URL with port
+    const baseUrl = `${provider.server_protocol}://${provider.server_url}`;
+    const port = provider.server_protocol === 'https' ? provider.https_port : provider.server_port;
+    const urlWithPort = port ? `${baseUrl}:${port}` : baseUrl;
+
+    const url = new URL('/player_api.php', urlWithPort);
+    url.searchParams.append('username', provider.username);
+    url.searchParams.append('password', provider.password);
+    url.searchParams.append('action', 'get_live_categories');
+
+    try {
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+            throw new Error(`Failed to fetch categories - HTTP status: ${response.status}`);
+        }
+
+        const categories = await response.json();
+
+        // Create categories in batch
+        const promises = categories.map(async (cat: any) => {
+            try {
+                return await pb.collection('categories').create({
+                    provider_id: provider.id,
+                    category_type: 'live',
+                    name: cat.category_name,
+                    metadata: {
+                        category_id: cat.category_id,
+                        parent_id: cat.parent_id
+                    }
+                });
+            } catch (error) {
+                console.error(`Failed to create category ${cat.category_name}:`, error);
+                return null;
+            }
+        });
+
+        return await Promise.all(promises);
+
+    } catch (error) {
+        console.error('Error syncing categories:', error);
+        throw error;
+    }
+};
+
+// IPTV Channels Management Functions
+export const syncChannels = async (provider: IPTVProvider) => {
+    const baseUrl = `${provider.server_protocol}://${provider.server_url}`;
+    const port = provider.server_protocol === 'https' ? provider.https_port : provider.server_port;
+    const urlWithPort = port ? `${baseUrl}:${port}` : baseUrl;
+
+    const url = new URL('/player_api.php', urlWithPort);
+    url.searchParams.append('username', provider.username);
+    url.searchParams.append('password', provider.password);
+    url.searchParams.append('action', 'get_live_streams');
+
+    try {
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+            throw new Error(`Failed to fetch channels - HTTP status: ${response.status}`);
+        }
+
+        const channels = await response.json();
+
+        // Get all categories for this provider for lookup
+        const categoriesResult = await pb.collection('categories').getFullList({
+            filter: `provider_id = "${provider.id}"`
+        });
+
+        const categoryMap = new Map(
+            categoriesResult.map(cat => [cat.metadata.category_id, cat.id])
+        );
+
+        // Create channels in batches of 50 to avoid overwhelming the server
+        const batchSize = 50;
+        const batches = [];
+
+        for (let i = 0; i < channels.length; i += batchSize) {
+            const batch = channels.slice(i, i + batchSize).map(async (ch: any) => {
+                try {
+                    return await pb.collection('channels').create({
+                        provider_id: provider.id,
+                        category_id: categoryMap.get(ch.category_id),
+                        name: ch.name,
+                        icon_url: ch.stream_icon || '',
+                        metadata: {
+                            stream_id: ch.stream_id,
+                            category_id: ch.category_id,
+                            stream_type: ch.stream_type,
+                            tv_archive: ch.tv_archive,
+                            direct_source: ch.direct_source,
+                            added: ch.added,
+                            custom_sid: ch.custom_sid,
+                            epg_id: ch.epg_channel_id
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Failed to create channel ${ch.name}:`, error);
+                    return null;
+                }
+            });
+            batches.push(Promise.all(batch));
+        }
+
+        // Execute all batches sequentially
+        const results = [];
+        for (const batch of batches) {
+            const batchResults = await batch;
+            results.push(...batchResults);
+        }
+
+        return results.filter(r => r !== null);
+
+    } catch (error) {
+        console.error('Error syncing channels:', error);
+        throw error;
+    }
+};
+
 // IPTV User Management Functions
 export const getIptvUsers = async () => {
     return await pb.collection('iptv_users').getList(1, 50, {

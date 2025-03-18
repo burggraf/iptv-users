@@ -48,3 +48,36 @@ export interface IPTVProvider {
     timestamp_now: number;
     time_now: string;
 }
+
+export interface IPTVCategory {
+    id: string;
+    provider_id: string;
+    category_type: 'live' | 'movie' | 'series';
+    name: string;
+    metadata: {
+        category_id: string;
+        parent_id?: string;
+    };
+    created: string;
+    updated: string;
+}
+
+export interface IPTVChannel {
+    id: string;
+    provider_id: string;
+    category_id?: string;
+    name: string;
+    icon_url: string;
+    metadata: {
+        stream_id: string;
+        category_id: string;
+        stream_type: string;
+        tv_archive: number;
+        direct_source: number;
+        added: string;
+        custom_sid: string;
+        epg_id: string;
+    };
+    created: string;
+    updated: string;
+}

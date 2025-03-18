@@ -18,15 +18,48 @@
 	} from '$lib/components/ui/table';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import ProviderDialog from '$lib/components/provider-dialog.svelte';
-	import { getProviders, deleteProvider, providers, checkProviderUserInfo } from '$lib/pocketbase';
+	import {
+		getProviders,
+		deleteProvider,
+		providers,
+		checkProviderUserInfo,
+		syncCategories,
+		syncChannels
+	} from '$lib/pocketbase';
 	import type { IPTVProvider } from '$lib/types';
 	import { onMount } from 'svelte';
+	import {
+		DropdownMenu,
+		DropdownMenuContent,
+		DropdownMenuItem,
+		DropdownMenuSeparator,
+		DropdownMenuTrigger
+	} from '$lib/components/ui/dropdown-menu';
 
 	let loading = true;
 	let error = '';
+	let success = '';
 	let searchQuery = '';
 	let dialogOpen = false;
 	let selectedProvider: IPTVProvider | null = null;
+	let syncing: { [key: string]: boolean } = {};
+
+	let messageTimeout: NodeJS.Timeout;
+
+	function showMessage(message: string, isError = false) {
+		if (messageTimeout) clearTimeout(messageTimeout);
+		if (isError) {
+			error = message;
+			success = '';
+		} else {
+			success = message;
+			error = '';
+		}
+		messageTimeout = setTimeout(() => {
+			error = '';
+			success = '';
+		}, 3000);
+	}
 
 	async function loadProviders() {
 		try {
@@ -81,6 +114,36 @@
 		}
 	}
 
+	async function handleSyncCategories(provider: IPTVProvider) {
+		if (syncing[provider.id]) return;
+		syncing[provider.id] = true;
+
+		try {
+			await syncCategories(provider);
+			showMessage(`Successfully synced categories for ${provider.name}`);
+		} catch (err) {
+			console.error('Error syncing categories:', err);
+			showMessage('Failed to sync categories. Please try again.', true);
+		} finally {
+			syncing[provider.id] = false;
+		}
+	}
+
+	async function handleSyncChannels(provider: IPTVProvider) {
+		if (syncing[provider.id]) return;
+		syncing[provider.id] = true;
+
+		try {
+			await syncChannels(provider);
+			showMessage(`Successfully synced channels for ${provider.name}`);
+		} catch (err) {
+			console.error('Error syncing channels:', err);
+			showMessage('Failed to sync channels. Please try again.', true);
+		} finally {
+			syncing[provider.id] = false;
+		}
+	}
+
 	function handleAdd() {
 		selectedProvider = null;
 		dialogOpen = true;
@@ -94,12 +157,18 @@
 		<div class="w-1/3">
 			<Input type="text" placeholder="Search providers..." bind:value={searchQuery} />
 		</div>
-		<Button on:click={handleAdd}>Add New Provider</Button>
+		<Button onclick={handleAdd}>Add New Provider</Button>
 	</div>
 
 	{#if error}
 		<Alert variant="destructive" class="mb-4">
 			<AlertDescription>{error}</AlertDescription>
+		</Alert>
+	{/if}
+
+	{#if success}
+		<Alert variant="default" class="mb-4 bg-green-50">
+			<AlertDescription class="text-green-800">{success}</AlertDescription>
 		</Alert>
 	{/if}
 
@@ -132,18 +201,39 @@
 								<TableCell>{provider.status}</TableCell>
 								<TableCell>{provider.max_connections}</TableCell>
 								<TableCell class="flex gap-2">
-									<Button variant="outline" size="sm" on:click={() => handleEdit(provider)}
-										>Edit</Button
-									>
-									<Button variant="outline" size="sm" on:click={() => handleCheckInfo(provider)}
-										>Check Info</Button
-									>
-									<Button
-										variant="outline"
-										size="sm"
-										class="text-red-600"
-										on:click={() => handleDelete(provider)}>Delete</Button
-									>
+									<DropdownMenu>
+										<DropdownMenuTrigger>
+											<Button variant="outline" size="sm">Actions</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem onSelect={() => handleEdit(provider)}>
+												Edit
+											</DropdownMenuItem>
+											<DropdownMenuItem onSelect={() => handleCheckInfo(provider)}>
+												Check Info
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem
+												disabled={syncing[provider.id]}
+												onSelect={() => handleSyncCategories(provider)}
+											>
+												{syncing[provider.id] ? 'Syncing Categories...' : 'Sync Categories'}
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												disabled={syncing[provider.id]}
+												onSelect={() => handleSyncChannels(provider)}
+											>
+												{syncing[provider.id] ? 'Syncing Channels...' : 'Sync Channels'}
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem
+												onSelect={() => handleDelete(provider)}
+												class="text-red-600"
+											>
+												Delete
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
 								</TableCell>
 							</TableRow>
 						{/each}
