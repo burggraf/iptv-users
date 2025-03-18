@@ -183,10 +183,10 @@ export const syncCategories = async (provider: IPTVProvider) => {
 
         const categories = await response.json();
 
-        // Create categories in batch
-        const promises = categories.map(async (cat: any) => {
+        // Process categories sequentially instead of in parallel to avoid auto-cancellation
+        for (const cat of categories) {
             try {
-                return await pb.collection('categories').create({
+                await pb.collection('categories').create({
                     provider_id: provider.id,
                     category_type: 'live',
                     name: cat.category_name,
@@ -196,12 +196,13 @@ export const syncCategories = async (provider: IPTVProvider) => {
                     }
                 });
             } catch (error) {
-                console.error(`Failed to create category ${cat.category_name}:`, error);
-                return null;
+                // If it's not a duplicate entry error, throw it
+                if (!error.message?.includes('Failed to create category')) {
+                    throw error;
+                }
+                console.warn(`Skipping duplicate category ${cat.category_name}`);
             }
-        });
-
-        return await Promise.all(promises);
+        }
 
     } catch (error) {
         console.error('Error syncing categories:', error);
@@ -237,45 +238,37 @@ export const syncChannels = async (provider: IPTVProvider) => {
             categoriesResult.map(cat => [cat.metadata.category_id, cat.id])
         );
 
-        // Create channels in batches of 50 to avoid overwhelming the server
-        const batchSize = 50;
-        const batches = [];
-
-        for (let i = 0; i < channels.length; i += batchSize) {
-            const batch = channels.slice(i, i + batchSize).map(async (ch: any) => {
-                try {
-                    return await pb.collection('channels').create({
-                        provider_id: provider.id,
-                        category_id: categoryMap.get(ch.category_id),
-                        name: ch.name,
-                        icon_url: ch.stream_icon || '',
-                        metadata: {
-                            stream_id: ch.stream_id,
-                            category_id: ch.category_id,
-                            stream_type: ch.stream_type,
-                            tv_archive: ch.tv_archive,
-                            direct_source: ch.direct_source,
-                            added: ch.added,
-                            custom_sid: ch.custom_sid,
-                            epg_id: ch.epg_channel_id
-                        }
-                    });
-                } catch (error) {
-                    console.error(`Failed to create channel ${ch.name}:`, error);
-                    return null;
-                }
-            });
-            batches.push(Promise.all(batch));
-        }
-
-        // Execute all batches sequentially
+        // Process channels sequentially instead of in batches
         const results = [];
-        for (const batch of batches) {
-            const batchResults = await batch;
-            results.push(...batchResults);
+        for (const ch of channels) {
+            try {
+                const channel = await pb.collection('channels').create({
+                    provider_id: provider.id,
+                    category_id: categoryMap.get(ch.category_id),
+                    name: ch.name,
+                    icon_url: ch.stream_icon || '',
+                    metadata: {
+                        stream_id: ch.stream_id,
+                        category_id: ch.category_id,
+                        stream_type: ch.stream_type,
+                        tv_archive: ch.tv_archive,
+                        direct_source: ch.direct_source,
+                        added: ch.added,
+                        custom_sid: ch.custom_sid,
+                        epg_id: ch.epg_channel_id
+                    }
+                });
+                results.push(channel);
+            } catch (error) {
+                // If it's not an auto-cancellation error, log it
+                if (!error.message?.includes('autocancelled')) {
+                    console.error(`Failed to create channel ${ch.name}:`, error);
+                }
+                continue;
+            }
         }
 
-        return results.filter(r => r !== null);
+        return results;
 
     } catch (error) {
         console.error('Error syncing channels:', error);
