@@ -1,6 +1,7 @@
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = (async ({ request }) => {
     const { streamId, providerUrl, username, password } = await request.json();
 
     // Construct the stream URL
@@ -19,20 +20,14 @@ export const POST: RequestHandler = async ({ request }) => {
         clearTimeout(timeoutId);
 
         if (response.ok) {
-            return new Response(JSON.stringify({ valid: true, status: response.status }), {
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return json({ valid: true, status: response.status });
         } else {
-            return new Response(JSON.stringify({ valid: false, status: response.status }), {
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return json({ valid: false, status: response.status });
         }
     } catch (error) {
-        return new Response(JSON.stringify({
+        return json({
             valid: false,
             error: error instanceof Error ? error.message : 'Unknown error'
-        }), {
-            headers: { 'Content-Type': 'application/json' }
         });
     }
-}
+}) satisfies RequestHandler;

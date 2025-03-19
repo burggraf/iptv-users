@@ -25,7 +25,8 @@
 		checkProviderUserInfo,
 		syncCategories,
 		syncChannels,
-		pb
+		pb,
+		getAuthHeaders
 	} from '$lib/pocketbase';
 	import type { IPTVProvider } from '$lib/types';
 	import { onMount } from 'svelte';
@@ -42,6 +43,8 @@
 		AccordionItem,
 		AccordionTrigger
 	} from '$lib/components/ui/accordion';
+	import { FlaskConical } from 'lucide-svelte';
+	import { format } from 'date-fns';
 
 	let loading = true;
 	let error = '';
@@ -54,6 +57,7 @@
 	let loadedCategories: { [key: string]: any[] } = {};
 	let loadedChannels: { [key: string]: any[] } = {};
 	let expandedCategories: Set<string> = new Set();
+	let validatingChannel: { [key: string]: boolean } = {};
 
 	let messageTimeout: NodeJS.Timeout;
 
@@ -143,6 +147,65 @@
 			await loadCategoryChannels(providerId, categoryId);
 			expandedCategories.add(categoryId);
 			expandedCategories = expandedCategories; // Trigger Svelte reactivity
+		}
+	}
+
+	async function validateChannel(channel: any) {
+		const channelId = channel.id;
+		console.log('Validating channel:', channelId, channel);
+
+		if (validatingChannel[channelId]) {
+			console.log('Channel validation already in progress');
+			return;
+		}
+
+		validatingChannel[channelId] = true;
+		try {
+			console.log('Making validation request to:', '/api/validate-channel');
+			const response = await fetch('/api/validate-channel', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...getAuthHeaders()
+				},
+				body: JSON.stringify({ channelId })
+			});
+
+			console.log('Validation response:', {
+				ok: response.ok,
+				status: response.status,
+				statusText: response.statusText
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				console.error('Validation error response:', errorText);
+				throw new Error(`Validation failed: ${response.status} ${response.statusText}`);
+			}
+
+			const result = await response.json();
+			console.log('Validation result:', result);
+
+			// Refresh the channel data
+			console.log('Fetching updated channel data');
+			const updatedChannel = await pb.collection('channels').getOne(channelId);
+			console.log('Updated channel data:', updatedChannel);
+
+			// Update the channel in the loadedChannels array
+			const categoryId = channel.category_id;
+			loadedChannels[categoryId] = loadedChannels[categoryId].map((ch) =>
+				ch.id === channelId ? updatedChannel : ch
+			);
+			loadedChannels = loadedChannels; // Trigger reactivity
+		} catch (err) {
+			console.error('Error validating channel:', {
+				error: err,
+				message: err.message,
+				stack: err.stack
+			});
+			error = 'Failed to validate channel. Please try again.';
+		} finally {
+			validatingChannel[channelId] = false;
 		}
 	}
 
@@ -251,16 +314,31 @@
 		selectedProvider = null;
 		dialogOpen = true;
 	}
+
+	async function testApi() {
+		try {
+			console.log('Testing API endpoint...');
+			const response = await fetch('/api/test');
+			console.log('API Response status:', response.status);
+			const data = await response.json();
+			console.log('API Response:', data);
+		} catch (error) {
+			console.error('API Test Error:', error);
+		}
+	}
 </script>
 
 <div class="container mx-auto py-10">
 	<h1 class="mb-6 text-4xl font-bold">IPTV Providers Management</h1>
 
-	<div class="mb-6 flex justify-between">
+	<div class="mb-6 flex items-center justify-between">
 		<div class="w-1/3">
 			<Input type="text" placeholder="Search providers..." bind:value={searchQuery} />
 		</div>
-		<Button on:click={handleAdd}>Add New Provider</Button>
+		<div class="flex gap-2">
+			<Button on:click={testApi} variant="outline">Test API</Button>
+			<Button on:click={handleAdd}>Add New Provider</Button>
+		</div>
 	</div>
 
 	{#if error}
@@ -268,13 +346,11 @@
 			<AlertDescription>{error}</AlertDescription>
 		</Alert>
 	{/if}
-
 	{#if success}
 		<Alert variant="default" class="mb-4 bg-green-50">
 			<AlertDescription class="text-green-800">{success}</AlertDescription>
 		</Alert>
 	{/if}
-
 	{#if loading}
 		<p>Loading providers...</p>
 	{:else}
@@ -400,8 +476,46 @@
 																</div>
 																<div class="space-y-1">
 																	{#each loadedChannels[category.id] as channel}
-																		<div class="flex items-center rounded bg-muted p-2 text-sm">
-																			{channel.name}
+																		<div
+																			class="flex items-center justify-between rounded bg-muted p-2 text-sm"
+																		>
+																			<div class="flex-1">
+																				<div>{channel.name}</div>
+																				{#if channel.validation_date}
+																					<div class="text-xs text-muted-foreground">
+																						Validated: {format(
+																							new Date(channel.validation_date),
+																							'MMM d, yyyy HH:mm'
+																						)}
+																						{#if channel.validation_result}
+																							<span
+																								class={channel.validation_result.valid
+																									? 'text-green-600'
+																									: 'text-red-600'}
+																							>
+																								• {channel.validation_result.valid
+																									? 'Valid'
+																									: 'Invalid'}
+																								{#if channel.validation_result.error}
+																									- {channel.validation_result.error}
+																								{/if}
+																							</span>
+																						{/if}
+																					</div>
+																				{/if}
+																			</div>
+																			<button
+																				class="ml-2 rounded p-1 transition-colors hover:bg-background"
+																				on:click={() => validateChannel(channel)}
+																				disabled={validatingChannel[channel.id]}
+																			>
+																				<FlaskConical
+																					size={16}
+																					class={validatingChannel[channel.id]
+																						? 'animate-spin text-muted-foreground'
+																						: ''}
+																				/>
+																			</button>
 																		</div>
 																	{/each}
 																</div>

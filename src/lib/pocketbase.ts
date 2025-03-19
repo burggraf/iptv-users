@@ -32,6 +32,16 @@ export const register = async (email: string, password: string, passwordConfirm:
     });
 };
 
+// Helper function to get auth headers for API requests
+export const getAuthHeaders = () => {
+    if (!pb.authStore.isValid) {
+        return {};
+    }
+    return {
+        'Authorization': pb.authStore.token
+    };
+};
+
 // IPTV Provider Management Functions
 export const getProviders = async () => {
     const result = await pb.collection('iptv_providers').getList(1, 50, {

@@ -42,6 +42,7 @@
 		"zod": "^3.24.2"
 	},
 	"dependencies": {
+		"date-fns": "^4.1.0",
 		"pocketbase": "^0.25.2",
 		"shadcn-svelte": "^0.14.0"
 	}
