@@ -52,6 +52,8 @@
 	let syncing: { [key: string]: boolean } = {};
 	let providerStats: { [key: string]: { categories: number; channels: number } } = {};
 	let loadedCategories: { [key: string]: any[] } = {};
+	let loadedChannels: { [key: string]: any[] } = {};
+	let expandedCategories: Set<string> = new Set();
 
 	let messageTimeout: NodeJS.Timeout;
 
@@ -81,15 +83,66 @@
 	async function loadProviderCategories(providerId: string) {
 		if (!loadedCategories[providerId]) {
 			try {
+				// Get all categories for this provider
 				const categoriesResult = await pb.collection('categories').getList(1, 500, {
 					filter: `provider_id = "${providerId}"`,
 					sort: 'name'
 				});
-				loadedCategories[providerId] = categoriesResult.items;
-			} catch (err) {
+
+				// Get all channel counts in one query using the SvelteKit API endpoint
+				const channelCountsResponse = await fetch('/api/channel-counts', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						providerId,
+						categoryIds: categoriesResult.items.map((cat) => cat.id)
+					})
+				});
+
+				if (!channelCountsResponse.ok) {
+					throw new Error(`Failed to get channel counts: ${channelCountsResponse.statusText}`);
+				}
+
+				const channelCountsResult = await channelCountsResponse.json();
+
+				// Map the categories with their counts
+				loadedCategories[providerId] = categoriesResult.items.map((category) => ({
+					...category,
+					channelCount: channelCountsResult[category.id] || 0
+				}));
+			} catch (err: any) {
 				console.error('Error loading categories:', err);
 				error = 'Failed to load categories. Please try again.';
 			}
+		}
+	}
+
+	async function loadCategoryChannels(providerId: string, categoryId: string) {
+		const cacheKey = `${categoryId}`;
+		if (!loadedChannels[cacheKey]) {
+			try {
+				const channelsResult = await pb.collection('channels').getList(1, 500, {
+					filter: `provider_id = "${providerId}" && category_id = "${categoryId}"`,
+					sort: 'name'
+				});
+				loadedChannels[cacheKey] = channelsResult.items;
+			} catch (err) {
+				console.error('Error loading channels:', err);
+				error = 'Failed to load channels. Please try again.';
+			}
+		}
+	}
+
+	async function toggleCategoryChannels(providerId: string, categoryId: string) {
+		if (expandedCategories.has(categoryId)) {
+			expandedCategories.delete(categoryId);
+			expandedCategories = expandedCategories; // Trigger Svelte reactivity
+		} else {
+			await loadCategoryChannels(providerId, categoryId);
+			expandedCategories.add(categoryId);
+			expandedCategories = expandedCategories; // Trigger Svelte reactivity
 		}
 	}
 
@@ -287,13 +340,78 @@
 								{#if loadedCategories[provider.id]}
 									<div class="mt-4">
 										<h4 class="mb-2 text-sm font-semibold">Categories</h4>
-										<div class="grid grid-cols-3 gap-4">
+										<div class="space-y-2">
 											{#each loadedCategories[provider.id] as category}
 												<div class="rounded-md border p-4">
-													<h5 class="font-medium">{category.name}</h5>
-													<p class="text-sm text-muted-foreground">
-														Type: {category.category_type}
-													</p>
+													<button
+														class="flex w-full items-center justify-between"
+														on:click={() => toggleCategoryChannels(provider.id, category.id)}
+													>
+														<div>
+															<h5 class="font-medium">{category.name}</h5>
+															<p class="text-sm text-muted-foreground">
+																Type: {category.category_type} • {category.channelCount} channels
+															</p>
+														</div>
+														<Button variant="ghost" size="sm" class="gap-2">
+															{#if expandedCategories.has(category.id)}
+																Hide Channels
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	width="16"
+																	height="16"
+																	viewBox="0 0 24 24"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	class="rotate-180 transition-transform"
+																>
+																	<polyline points="6 9 12 15 18 9"></polyline>
+																</svg>
+															{:else}
+																View Channels
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	width="16"
+																	height="16"
+																	viewBox="0 0 24 24"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																>
+																	<polyline points="6 9 12 15 18 9"></polyline>
+																</svg>
+															{/if}
+														</Button>
+													</button>
+
+													{#if expandedCategories.has(category.id)}
+														{#if loadedChannels[category.id]}
+															<div class="mt-4 border-l pl-4">
+																<div class="mb-2 flex items-center justify-between">
+																	<h6 class="text-sm font-medium">Channels</h6>
+																	<span class="text-xs text-muted-foreground">
+																		{loadedChannels[category.id].length} channels
+																	</span>
+																</div>
+																<div class="space-y-1">
+																	{#each loadedChannels[category.id] as channel}
+																		<div class="flex items-center rounded bg-muted p-2 text-sm">
+																			{channel.name}
+																		</div>
+																	{/each}
+																</div>
+															</div>
+														{:else}
+															<div class="flex items-center justify-center py-4">
+																<span class="text-muted-foreground">Loading channels...</span>
+															</div>
+														{/if}
+													{/if}
 												</div>
 											{/each}
 										</div>
