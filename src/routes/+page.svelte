@@ -81,7 +81,7 @@
 	async function loadProviderCategories(providerId: string) {
 		if (!loadedCategories[providerId]) {
 			try {
-				const categoriesResult = await pb.collection('categories').getList(1, 50, {
+				const categoriesResult = await pb.collection('categories').getList(1, 500, {
 					filter: `provider_id = "${providerId}"`,
 					sort: 'name'
 				});
