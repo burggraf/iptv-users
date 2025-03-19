@@ -36,6 +36,12 @@
 		DropdownMenuSeparator,
 		DropdownMenuTrigger
 	} from '$lib/components/ui/dropdown-menu';
+	import {
+		Accordion,
+		AccordionContent,
+		AccordionItem,
+		AccordionTrigger
+	} from '$lib/components/ui/accordion';
 
 	let loading = true;
 	let error = '';
@@ -45,6 +51,7 @@
 	let selectedProvider: IPTVProvider | null = null;
 	let syncing: { [key: string]: boolean } = {};
 	let providerStats: { [key: string]: { categories: number; channels: number } } = {};
+	let loadedCategories: { [key: string]: any[] } = {};
 
 	let messageTimeout: NodeJS.Timeout;
 
@@ -67,6 +74,21 @@
 				};
 			} catch (err) {
 				console.error('Error loading stats for provider:', provider.id, err);
+			}
+		}
+	}
+
+	async function loadProviderCategories(providerId: string) {
+		if (!loadedCategories[providerId]) {
+			try {
+				const categoriesResult = await pb.collection('categories').getList(1, 50, {
+					filter: `provider_id = "${providerId}"`,
+					sort: 'name'
+				});
+				loadedCategories[providerId] = categoriesResult.items;
+			} catch (err) {
+				console.error('Error loading categories:', err);
+				error = 'Failed to load categories. Please try again.';
 			}
 		}
 	}
@@ -185,7 +207,7 @@
 		<div class="w-1/3">
 			<Input type="text" placeholder="Search providers..." bind:value={searchQuery} />
 		</div>
-		<Button onclick={handleAdd}>Add New Provider</Button>
+		<Button on:click={handleAdd}>Add New Provider</Button>
 	</div>
 
 	{#if error}
@@ -209,30 +231,23 @@
 				<CardDescription>Manage your IPTV providers and their connection details</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Name</TableHead>
-							<TableHead>Username</TableHead>
-							<TableHead>Server URL</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead>Categories</TableHead>
-							<TableHead>Channels</TableHead>
-							<TableHead>Max Connections</TableHead>
-							<TableHead>Actions</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{#each filterProviders($providers) as provider (provider.id)}
-							<TableRow>
-								<TableCell>{provider.name}</TableCell>
-								<TableCell>{provider.username}</TableCell>
-								<TableCell>{provider.server_url}</TableCell>
-								<TableCell>{provider.status}</TableCell>
-								<TableCell>{providerStats[provider.id]?.categories ?? 0}</TableCell>
-								<TableCell>{providerStats[provider.id]?.channels ?? 0}</TableCell>
-								<TableCell>{provider.max_connections}</TableCell>
-								<TableCell class="flex gap-2">
+				<Accordion>
+					{#each filterProviders($providers) as provider (provider.id)}
+						<AccordionItem value={provider.id}>
+							<AccordionTrigger
+								on:click={() => loadProviderCategories(provider.id)}
+								class="grid w-full grid-cols-6"
+							>
+								<div class="flex items-center gap-4">
+									<span class="font-medium">{provider.name}</span>
+								</div>
+								<span class={provider.status === 'Active' ? 'text-green-600' : 'text-red-600'}>
+									{provider.status}
+								</span>
+								<span>{providerStats[provider.id]?.categories ?? 0} Categories</span>
+								<span>{providerStats[provider.id]?.channels ?? 0} Channels</span>
+								<span>{provider.max_connections} Connections</span>
+								<div class="flex justify-end">
 									<DropdownMenu>
 										<DropdownMenuTrigger>
 											<Button variant="outline" size="sm">Actions</Button>
@@ -266,11 +281,32 @@
 											</DropdownMenuItem>
 										</DropdownMenuContent>
 									</DropdownMenu>
-								</TableCell>
-							</TableRow>
-						{/each}
-					</TableBody>
-				</Table>
+								</div>
+							</AccordionTrigger>
+							<AccordionContent>
+								{#if loadedCategories[provider.id]}
+									<div class="mt-4">
+										<h4 class="mb-2 text-sm font-semibold">Categories</h4>
+										<div class="grid grid-cols-3 gap-4">
+											{#each loadedCategories[provider.id] as category}
+												<div class="rounded-md border p-4">
+													<h5 class="font-medium">{category.name}</h5>
+													<p class="text-sm text-muted-foreground">
+														Type: {category.category_type}
+													</p>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{:else}
+									<div class="flex items-center justify-center py-8">
+										<span class="text-muted-foreground">Loading categories...</span>
+									</div>
+								{/if}
+							</AccordionContent>
+						</AccordionItem>
+					{/each}
+				</Accordion>
 			</CardContent>
 		</Card>
 	{/if}
